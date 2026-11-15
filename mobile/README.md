@@ -1,5 +1,13 @@
 # StudentMart Mobile
 
+## Đăng tin ba loại — #127/#129
+
+Nút **Đăng tin** trên màn hình khám phá hiện đi qua xác minh phiên tới form **Bán / Tìm mua / Trao đổi**, dùng API catalog thật và component ảnh của #124. Bán/Trao đổi cần ảnh đã upload; Tìm mua có thể không có ảnh hoặc ngân sách. Danh mục/khu vực chưa có dữ liệu được duyệt sẽ hiện thông báo và không cho gửi, không dùng danh sách mẫu. Có thể giữ nội dung trong bộ nhớ khi rời form/quay lại trong phiên; persistence sau kill/restart app thuộc TASK-23 #24, chưa triển khai ở đây.
+
+Sau khi server xác nhận lưu, app chuyển tới **Tin đã lưu của bạn**, tải lại bằng API riêng của chủ tin. Trang này không thay thế tìm kiếm, Tin của tôi, chỉnh sửa hay chat của các task sau. Lỗi lưu giữ dữ liệu; kết quả chưa rõ sẽ khóa nội dung và đối chiếu cùng `Idempotency-Key`, không tạo key mới tự động. `expo-crypto` sinh UUID; không lưu token trong draft. Logout/đổi phiên xóa draft và bỏ phản hồi cũ.
+
+Kiểm tra trên thiết bị: login (kể cả chưa verify) → Đăng tin → chọn loại/danh mục/khu vực → nhập dữ liệu/tải ảnh nếu cần → Đăng tin → chỉ sau xác nhận server mới thấy trang tin đã lưu. Thử mất mạng sau gửi rồi đối chiếu/thử lại; kiểm tra Back, quay lại từ picker, font scaling/keyboard và chuyển A → B. Typecheck/unit/export không thay nghiệm thu trên điện thoại. Development build cần build lại sau thêm native dependency `expo-crypto`; Expo Go cần bản tương thích SDK58 và reload Metro.
+
 **Kiến trúc:** Three-Layer theo feature, MVVM nhẹ cho UI React Native + Expo.
 
 Ứng dụng dùng Expo SDK 58, React 19.3, React Native 0.88.1 và TypeScript 6. Yêu cầu Node.js 22.13+ (nhánh 22.x), 24.3+ (nhánh 24.x), hoặc 26+.
