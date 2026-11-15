@@ -10,6 +10,8 @@ export function configureApiDocs(app: NestFastifyApplication): void {
     ? bundledContract
     : resolve(__dirname, "../../../../docs/contracts/accounts.openapi.yaml");
   const contract = parse(readFileSync(contractPath, "utf8")) as OpenAPIObject;
+  const listingPath = existsSync(resolve(__dirname,"listings.openapi.yaml")) ? resolve(__dirname,"listings.openapi.yaml") : resolve(__dirname,"../../../../docs/contracts/listings.openapi.yaml");
+  const listings = parse(readFileSync(listingPath,"utf8")) as OpenAPIObject;
   const document = SwaggerModule.createDocument(app, new DocumentBuilder()
     .setTitle("StudentMart API")
     .setDescription("API đang triển khai của StudentMart. Đăng ký tạo tài khoản MEMBER, không cấp phiên đăng nhập.")
@@ -22,9 +24,10 @@ export function configureApiDocs(app: NestFastifyApplication): void {
   // Discover implemented routes in Nest, then enrich them with the canonical contract.
   // Planned endpoints from the contract must not appear as callable implementations.
   document.components = { ...contract.components, ...document.components,
-    schemas: { ...contract.components?.schemas, ...document.components?.schemas } };
+    schemas: { ...contract.components?.schemas, ...listings.components?.schemas, ...document.components?.schemas } };
   for (const path of Object.keys(document.paths)) {
-    const definition = contract.paths[path.replace(/^\/api\/v1(?=\/)/, "")];
+    const relativePath=path.replace(/^\/api\/v1(?=\/)/, "");
+    const definition = relativePath.startsWith("/listing-media") ? listings.paths[relativePath] : contract.paths[relativePath];
     for (const method of ["get", "post", "put", "patch", "delete", "head", "options", "trace"] as const) {
       if (document.paths[path][method] && definition?.[method]) {
         document.paths[path][method] = definition[method];

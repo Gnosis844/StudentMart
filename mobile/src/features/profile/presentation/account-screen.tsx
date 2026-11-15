@@ -6,7 +6,7 @@ import { profileDetails, profileInitials } from "../business/profile";
 import type { ProfileModel } from "../business/profile-model";
 import { useProfileViewModel } from "./use-profile-view-model";
 
-type Props = { model: ProfileModel; onEndSession: () => Promise<void>; onBrowse: () => void; onEdit: () => void; onVerify: () => void };
+type Props = { model: ProfileModel; onEndSession: () => Promise<void>; onBrowse: () => void; onEdit: () => void; onVerify: () => void; onListingMedia: () => void };
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
   const [failed, setFailed] = useState(false);
@@ -15,7 +15,7 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
     : <View style={[styles.avatar, styles.avatarFallback]} accessibilityLabel="Ảnh đại diện mặc định"><Text style={styles.initials}>{profileInitials(name)}</Text></View>;
 }
 
-export function AccountScreen({ model, onEndSession, onBrowse, onEdit, onVerify }: Props) {
+export function AccountScreen({ model, onEndSession, onBrowse, onEdit, onVerify, onListingMedia }: Props) {
   const { state, retry } = useProfileViewModel(model);
   function confirm() {
     Alert.alert("Đăng xuất?", "Thông tin đăng nhập và dữ liệu riêng sẽ được dọn trên thiết bị này. Dữ liệu tài khoản trên máy chủ được giữ nguyên.", [

@@ -58,6 +58,6 @@ it("requires a secret and returns safe HTTP errors for invalid login and bearer 
       expect(response.body).not.toContain("private");
     }
     const docs = await app.inject({ method: "GET", url: "/api/docs/openapi.json" });
-    expect(Object.keys(docs.json().paths).sort()).toEqual(["/api/v1/accounts/me", "/api/v1/accounts/me/avatar", "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/catalog/areas", "/api/v1/catalog/schools"]);
+    expect(Object.keys(docs.json().paths).sort()).toEqual(["/api/v1/accounts/me", "/api/v1/accounts/me/avatar", "/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/catalog/areas", "/api/v1/catalog/schools", "/api/v1/listing-media", "/api/v1/listing-media/{mediaId}"]);
   } finally { await app.close(); }
 });
