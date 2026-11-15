@@ -212,3 +212,16 @@ Migration `AddListingMedia1794708894334` adds only ListingMedia and its owner in
 Future Listing create/update tickets must use `ListingMediaService.attach/detach(manager,ownerId,ids,listingId)` inside their Listing transaction. These lock/check owner, expiry, uniqueness and maximum8 references, and mark removals for cleanup only after commit. There is no Listing table/API yet; linkage currently is a reserved UUID plus state, not a fabricated foreign key. Complete ListingImage/FK integration and full update rollback remain the responsibility of #127/#130.
 
 Verification2026-11-15: backend typecheck/build and24 unit tests PASS. Real Cloudinary service/PostgreSQL smoke uploaded a generated PNG, fetched HTTPS200 and deleted it; temporary Account/media rows and remote asset cleaned. HTTP/provider-adapter integration is recorded in the task audit and must not be confused with native phone validation.
+
+## Listing creation (#127/#128)
+
+- `GET /api/v1/catalog/listing-categories`: public real catalog rows (empty until approved data is imported); areas use the existing catalog endpoint. No sample production seed is installed.
+- `POST /api/v1/listings`: authenticated strict SELL/BUY/EXCHANGE union, required UUID `Idempotency-Key`, server owner identity, OPEN/version1 only after SQL commit. Body limit is64KiB only for this route, allowing valid5000-code-point Unicode descriptions without changing auth JSON limits.
+- `GET /api/v1/me/listings/:id`: current owner projection; another actor gets404.
+- `GET /api/v1/me/listing-submissions/:key`: same actor reconciliation; unknown404 must not authorize a new retry key.
+
+Listing, ordered ListingImage and mutation success commit atomically with locked staged-media attachment. ListingImage has real Listing/ListingMedia foreign keys and media uniqueness; the pre-existing ListingMedia.listingId reservation remains an internal redundant marker, not the authoritative relationship. All mutation paths retain owner/state checks so cleanup cannot remove attached assets.
+
+Creation admits a durable actor/key record before side effects. A PostgreSQL session advisory lock serializes the attempt across admission and result transactions; simultaneous requests return409/Retry-After or replay the one completed result. On process crash the connection releases the lock; a subsequent same-key request can safely resume PROCESSING because listing/image/success commit together. Deterministic rolled-back business failures persist FAILED; transient failures remain unresolved for same-key retry. Replays preserve the original response snapshot, with Idempotency-Replayed:true. After24h the durable actor/key/hash/outcome tombstone rejects reuse with410; no automatic pruning or new-key retry is installed.
+
+Migration AddListingCreation1794710883065 creates ListingCategory, Listing, ListingImage and ListingMutation with foreign keys/checks/unique indexes. Reviewed up is additive; down deletes these new tables/data and was not executed. Applied student-mart:8migrations, none pending, schema matches. Existing tables/data preserved. No synchronize/reset. Editing/lifecycle mutations, public search/detail/chat and durable draft persistence remain separate tasks.

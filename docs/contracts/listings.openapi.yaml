@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: StudentMart Listing API Contract
   version: 0.1.0
-  description: "TASK-04.01 #121/#122 proposed contract for review. No listing endpoint, entity or migration is
+  description: "TASK-04.01 #121/#122 proposed contract for review. Historical contract baseline: runtime create/owner read/submission/catalog and staged media now exist; other operations remain planned. See listing-model.md runtime delta. The baseline design was
     implemented by this ticket. Numeric bounds are explicit proposals pending user PR review; see
     listing-model.md. R02-R04/R08; US02-US04/US08; UF02a/UF02b."
 servers:

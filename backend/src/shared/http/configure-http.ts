@@ -7,6 +7,9 @@ import { ApiExceptionFilter, sendApiError } from "./api-exception.filter";
 export function configureHttp(app: NestFastifyApplication, options: { avatarDiagnostics?: boolean } = {}): void {
   app.getHttpAdapter().getInstance().register(multipart, { limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0, parts: 1 } });
   if(options.avatarDiagnostics)configureAvatarDiagnostics(app.getHttpAdapter().getInstance());
+  app.getHttpAdapter().getInstance().addHook("onRoute", options => {
+    if (options.url === "/api/v1/listings" && options.method === "POST") options.bodyLimit = 65536;
+  });
   const limiter = new RegistrationRateLimiter();
   app.getHttpAdapter().getInstance().addHook("onRequest", async (request, reply) => {
     reply.header("X-Request-Id", request.id);

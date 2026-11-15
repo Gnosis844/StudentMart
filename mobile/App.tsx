@@ -1,3 +1,8 @@
+import { randomUUID } from "expo-crypto";
+import { createListingCreateRepository } from "./src/features/listings/data/listing-create-repository";
+import { createListingCreateModel } from "./src/features/listings/business/listing-create-model";
+import { ListingComposeScreen } from "./src/features/listings/presentation/listing-compose-screen";
+import { OwnListingScreen } from "./src/features/listings/presentation/own-listing-screen";
 import { ListingMediaPicker } from "./src/features/listings/presentation/listing-media-picker";
 import { createListingMediaModel } from "./src/features/listings/business/listing-media-model";
 import { createNativeListingMediaRepository, pickListingImages } from "./src/features/listings/data/native-listing-media";
@@ -33,12 +38,15 @@ const register = createRegistrationApi(API_URL);
 // Future account-scoped cache/chat/push adapters register here; public data stays outside this registry.
 const accountResources = createAccountLogoutResources();
 const auth = createAuthCoordinator(createAuthApi(API_URL), credentialStore, Date.now, accountResources);
-const navigation = createSessionNavigation(auth, unavailableListings);
+const listingCreateRepository = createListingCreateRepository(API_URL, auth);
+// The session is checked by runPrivate; catalog availability is real, not a fake create success.
+const navigation = createSessionNavigation(auth, { ...unavailableListings, async checkCreate() { await listingCreateRepository.catalog(); } });
 const avatar = createAvatarModel(createNativeAvatarRepository(API_URL, auth), auth, pickAvatar);
 const profileEdit = createProfileEditModel(createProfileEditRepository(API_URL, auth), auth);
 const listingMedia = createListingMediaModel(createNativeListingMediaRepository(API_URL, auth), auth, pickListingImages);
+const listingCreate = createListingCreateModel(listingCreateRepository, auth, listingMedia, randomUUID);
 const profile = createProfileModel(createProfileRepository(auth), auth);
-accountResources.register({ async clearPrivate() { profile.reset(); profileEdit.reset(); avatar.reset(); listingMedia.reset(); } });
+accountResources.register({ async clearPrivate() { profile.reset(); profileEdit.reset(); avatar.reset(); listingMedia.reset(); listingCreate.reset(); } });
 
 async function cancelLogin() {
   const pendingLogin = auth.getSnapshot().status === "guest" && auth.getSnapshot().busy;
@@ -59,7 +67,7 @@ export default function App() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", next => {
       // Guest forms have no credential to revalidate; keep autofill/background transitions from discarding them.
-      if (next === "active" && ["profile-edit", "listing-media"].includes(navigation.getSnapshot().route.name) && auth.getSnapshot().status === "authenticated") {
+      if (next === "active" && ["profile-edit", "listing-media", "compose"].includes(navigation.getSnapshot().route.name) && auth.getSnapshot().status === "authenticated") {
         // Revalidate without replacing the epoch/draft when the system image picker returns.
         void auth.runPrivate(async () => undefined).catch(() => undefined);
       } else if (next === "active" && auth.getSnapshot().status !== "guest") void auth.restore({ force: true });
@@ -67,7 +75,7 @@ export default function App() {
     const back = BackHandler.addEventListener("hardwareBackPress", () => {
       const route = navigation.getSnapshot().route.name;
       if (["login", "register"].includes(route)) { void cancelLogin(); return true; }
-      if (route === "profile-edit") return true;
+      if (route === "profile-edit" || route === "compose") return true;
       if (["profile-verification"].includes(route)) { void navigation.request({ action: "openPrivateProfile" }); return true; }
       if (route !== "browse") { navigation.browse(); return true; }
       return false;
@@ -95,7 +103,9 @@ export default function App() {
       <AuthButton label="Quay về hồ sơ" onPress={() => { void navigation.request({ action: "openPrivateProfile" }); }} />
     </AuthLayout>;
   } else if (route.name === "compose" && state.status === "authenticated") {
-    screen = <AuthLayout title="Đăng tin" subtitle="Chức năng đang hoàn thiện. Bạn có thể quay về khám phá."><AuthButton label="Quay lại" onPress={navigation.browse} /></AuthLayout>;
+    screen = <ListingComposeScreen model={listingCreate} media={listingMedia} onBack={navigation.browse} onCreated={navigation.ownListing} />;
+  } else if (route.name === "own-listing" && state.status === "authenticated") {
+    screen = <OwnListingScreen key={route.listingId} id={route.listingId} repository={listingCreateRepository} onBrowse={navigation.browse} onNew={() => { listingCreate.reset(); listingMedia.reset(); void navigation.request({ action: "createListing" }); }} />;
   } else if (route.name === "register") {
     screen = <RegisterScreen register={register} onRegistered={email => navigation.login(email, true)} onLogin={() => navigation.login()} />;
   } else if (route.name === "login") {
