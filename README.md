@@ -265,3 +265,5 @@ Dự án thuộc môn **CO3043 — Phát triển ứng dụng di động**, họ
 - **Giảng viên:** Hoàng Lê Hải Thanh.
 - **Organization:** [L02-VibeCode](https://github.com/L02-VibeCode).
 - **Project Board:** [StudentMart — Project 1](https://github.com/orgs/L02-VibeCode/projects/1).
+
+Listing contract TASK-04.01 (#121): [OpenAPI](docs/contracts/listings.openapi.yaml), [data/lifecycle](docs/contracts/listing-model.md), [mobile integration](docs/contracts/listing-mobile.md), [design review](docs/contracts/listing-design-review.md), [verification](docs/contracts/listing-verification.md). This ticket defines reviewable contracts, not implemented listing endpoints or database tables. Run `pnpm.cmd test:contracts` for schema checks; runtime integration belongs to subsequent TASK-04 tickets.
