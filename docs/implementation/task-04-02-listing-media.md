@@ -32,7 +32,7 @@ QA phát hiện lỗi cleanup dùng `listingId: undefined` trong update criteria
 
 Migration `AddListingMedia1794708894334`: BE xác nhận đã generate/review/apply; database `student-mart` có 7 migration đã áp dụng, none pending, schema khớp. Test chỉ sử dụng schema đã có. Migration tạo bảng và down xóa bảng sẽ mất dữ liệu media; QA không chạy down.
 
-Root/BE/FE bổ sung kết quả bộ kiểm tra tổng, Cloudinary smoke và Expo ở PR. Không suy ra full suite đã pass từ focused run.
+Root đã chạy bộ tổng: **235 contract/unit PASS** (119 contract + 24 BE unit + 92 mobile unit), **31 HTTP/PostgreSQL integration PASS** trên 15 files, typecheck PASS. BE báo smoke Cloudinary thật PASS với fixture tạm và cleanup; kết quả này tách biệt provider adapter ở QA tests. Kiểm tra schema: 7 migration applied, none pending, matches entity. Bằng chứng Expo/native được FE/root ghi riêng trong PR; không suy ra thiết bị đạt từ tests này.
 
 ## Phân biệt môi trường và việc còn chờ
 
