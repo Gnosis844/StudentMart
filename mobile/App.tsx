@@ -1,3 +1,6 @@
+import { ListingMediaPicker } from "./src/features/listings/presentation/listing-media-picker";
+import { createListingMediaModel } from "./src/features/listings/business/listing-media-model";
+import { createNativeListingMediaRepository, pickListingImages } from "./src/features/listings/data/native-listing-media";
 import { createAvatarModel } from "./src/features/profile/business/avatar-model";
 import { createNativeAvatarRepository } from "./src/features/profile/data/native-avatar-repository";
 import { pickAvatar } from "./src/features/profile/data/native-image-picker";
@@ -33,8 +36,9 @@ const auth = createAuthCoordinator(createAuthApi(API_URL), credentialStore, Date
 const navigation = createSessionNavigation(auth, unavailableListings);
 const avatar = createAvatarModel(createNativeAvatarRepository(API_URL, auth), auth, pickAvatar);
 const profileEdit = createProfileEditModel(createProfileEditRepository(API_URL, auth), auth);
+const listingMedia = createListingMediaModel(createNativeListingMediaRepository(API_URL, auth), auth, pickListingImages);
 const profile = createProfileModel(createProfileRepository(auth), auth);
-accountResources.register({ async clearPrivate() { profile.reset(); profileEdit.reset(); avatar.reset(); } });
+accountResources.register({ async clearPrivate() { profile.reset(); profileEdit.reset(); avatar.reset(); listingMedia.reset(); } });
 
 async function cancelLogin() {
   const pendingLogin = auth.getSnapshot().status === "guest" && auth.getSnapshot().busy;
@@ -55,7 +59,7 @@ export default function App() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", next => {
       // Guest forms have no credential to revalidate; keep autofill/background transitions from discarding them.
-      if (next === "active" && navigation.getSnapshot().route.name === "profile-edit" && auth.getSnapshot().status === "authenticated") {
+      if (next === "active" && ["profile-edit", "listing-media"].includes(navigation.getSnapshot().route.name) && auth.getSnapshot().status === "authenticated") {
         // Revalidate without replacing the epoch/draft when the system image picker returns.
         void auth.runPrivate(async () => undefined).catch(() => undefined);
       } else if (next === "active" && auth.getSnapshot().status !== "guest") void auth.restore({ force: true });
@@ -78,8 +82,10 @@ export default function App() {
     screen = <AuthLayout title="Đang xác nhận quyền truy cập" subtitle="Kiểm tra lại phiên và ngữ cảnh trước khi tiếp tục."><ActivityIndicator /><AuthButton label="Hủy, quay lại" onPress={navigation.cancelLogin} /></AuthLayout>;
   } else if (route.name === "profile" && state.status === "authenticated" && state.account) {
     screen = <AccountScreen key={state.account.id} model={profile} onBrowse={navigation.browse}
-      onEdit={() => navigation.profileDestination("edit")} onVerify={() => navigation.profileDestination("verification")}
+      onListingMedia={navigation.listingMedia} onEdit={() => navigation.profileDestination("edit")} onVerify={() => navigation.profileDestination("verification")}
       onEndSession={async () => { navigation.resetForLogout(); await auth.endSession(); }} />;
+  } else if (route.name === "listing-media" && state.status === "authenticated") {
+    screen = <AuthLayout title="Chuẩn bị ảnh tin đăng" subtitle="Ảnh tải lên được giữ tối đa 24 giờ khi chưa gắn tin. Chức năng đăng tin đang được triển khai riêng; đây chưa phải tin đã đăng."><ListingMediaPicker model={listingMedia} /><AuthButton label="Quay về hồ sơ" onPress={() => { void navigation.request({ action: "openPrivateProfile" }); }} /></AuthLayout>;
   } else if (route.name === "profile-edit" && state.status === "authenticated") {
     screen = <ProfileEditScreen key={state.account?.id} model={profileEdit} avatar={avatar} onBack={() => { void navigation.request({ action: "openPrivateProfile" }); }} />;
   } else if (["profile-verification"].includes(route.name) && state.status === "authenticated" && state.account) {
