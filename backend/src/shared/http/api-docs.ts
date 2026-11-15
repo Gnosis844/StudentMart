@@ -27,7 +27,7 @@ export function configureApiDocs(app: NestFastifyApplication): void {
     schemas: { ...contract.components?.schemas, ...listings.components?.schemas, ...document.components?.schemas } };
   for (const path of Object.keys(document.paths)) {
     const relativePath=path.replace(/^\/api\/v1(?=\/)/, "");
-    const definition = relativePath.startsWith("/listing-media") ? listings.paths[relativePath] : contract.paths[relativePath];
+    const definition = (relativePath.startsWith("/listing") || relativePath.startsWith("/me/listing") || relativePath === "/catalog/listing-categories") ? listings.paths[relativePath] : contract.paths[relativePath];
     for (const method of ["get", "post", "put", "patch", "delete", "head", "options", "trace"] as const) {
       if (document.paths[path][method] && definition?.[method]) {
         document.paths[path][method] = definition[method];

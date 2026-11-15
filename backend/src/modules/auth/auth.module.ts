@@ -1,3 +1,5 @@
+import {ListingController} from "../listings/presentation/listing.controller";
+import {ListingService} from "../listings/business/listing.service";
 import {ListingMediaController} from "../listings/presentation/listing-media.controller";
 import {ListingMediaService} from "../listings/business/listing-media.service";
 import {LISTING_MEDIA_STORAGE,type ListingMediaStorage} from "../listings/business/listing-media-storage";
@@ -24,8 +26,9 @@ export class AuthModule {
   static register(config: AppConfig): DynamicModule {
     if (!config.AUTH_RATE_LIMIT_SECRET) throw new Error("Configure AUTH_RATE_LIMIT_SECRET before starting authentication");
     return {
-      module: AuthModule, controllers: [ListingMediaController, AuthController, ProfileController, AvatarController],
+      module: AuthModule, controllers: [ListingController, ListingMediaController, AuthController, ProfileController, AvatarController],
       providers: [
+{provide:ListingService,inject:[DataSource,ListingMediaService],useFactory:(source:DataSource,media:ListingMediaService)=>new ListingService(source,media)},
 {provide:LISTING_MEDIA_STORAGE,useFactory:()=>new CloudinaryListingMediaStorage(config)},
 {provide:ListingMediaService,inject:[DataSource,LISTING_MEDIA_STORAGE],useFactory:(source:DataSource,storage:ListingMediaStorage)=>new ListingMediaService(source,storage)},
         { provide: AVATAR_STORAGE, useFactory: () => new CloudinaryAvatarStorage(config) },

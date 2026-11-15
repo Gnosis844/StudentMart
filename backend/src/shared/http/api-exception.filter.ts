@@ -32,7 +32,7 @@ export function sendApiError(error: unknown, request: FastifyRequest, reply: Fas
       fields = {};
       for (const issue of error.issues) {
         const name = String(issue.path[0] ?? "body");
-        fields[["email", "password", "displayName", "bio", "declaredSchoolId", "areaId"].includes(name) ? name : "body"] = "Thông tin chưa hợp lệ.";
+        fields[["email", "password", "displayName", "bio", "declaredSchoolId", "areaId", "title", "description", "type", "categoryId", "mediaIds", "price", "budget", "condition", "exchangeWanted"].includes(name) ? name : "body"] = "Thông tin chưa hợp lệ.";
       }
     } else if (error instanceof EmailAlreadyExistsError) {
       status = 409;
