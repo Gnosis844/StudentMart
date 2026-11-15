@@ -1,3 +1,4 @@
+import {ListingMedia} from "../../modules/listings/business/listing-media.entity";
 import { join } from "node:path";
 import type { DataSourceOptions } from "typeorm";
 import { Account } from "../../modules/accounts/business/account.entity";
@@ -13,7 +14,7 @@ export function databaseOptions(config: AppConfig): DataSourceOptions {
   return {
     type: "postgres",
     url: config.DATABASE_URL,
-    entities: [Account, AuthSession, School, Area, AvatarCleanup],
+    entities: [ListingMedia, Account, AuthSession, School, Area, AvatarCleanup],
     migrations: [join(__dirname, "migrations", "*.js")],
     migrationsTableName: "typeorm_migrations",
     synchronize: false,

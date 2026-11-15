@@ -196,3 +196,19 @@ A diagnostic smoke test with the configured local Cloudinary account passed agai
 In development only, the backend prints sanitized `avatar_request` JSON events with phase (`received`, `completed`, or `client_aborted` while receiving), fixed endpoint path, method, elapsedMs and HTTP status when available. It never logs bearer headers, query strings, account IDs, images, filenames or Cloudinary configuration. Production does not enable these diagnostics. Restart the backend after pulling this change.
 
 When retrying from the phone, no `received` event means that attempt has not reached this API; inspect device LAN/API origin or the native file transport. `received` without a completed response points to body transfer, client disconnect, or server processing. A completed HTTP error identifies a server response and should be compared with the mobile error mapping. A fast200 does not prove the phone consumed the response. These events diagnose timing; they do not raise upload timeouts or claim a particular phone error was reproduced.
+
+## Listing media (#124/#125)
+
+Implemented authenticated `POST /api/v1/listing-media` (one multipart field `file`, 201 `{media:{id,url,width,height,expiresAt}}`) and `DELETE /api/v1/listing-media/:mediaId` (204 for owned removed/repeated removal). Other-owner IDs return404; attached/uploading assets cannot be directly deleted (409). The avatar API/storage remains separate.
+
+Cloudinary uses the existing server-only environment settings and the `studentmart/listings/<owner>/<media>` namespace. Images are fully decoded and re-encoded as WebP with metadata removed: JPEG/PNG/WebP, maximum10MiB input,24MP and12000px per dimension. No provider IDs are returned. Swagger includes only implemented listing-media routes.
+
+Operational admission cap:32 UPLOADING/STAGED assets per account (not the8-image listing limit); admission locks the Account row and returns429 with Retry-After60 at the cap. Remove abandoned assets or run cleanup before retrying. Staged assets expire24h after creation; no invented catalog or listing is created.
+
+Run `pnpm.cmd --filter studentmart-backend listing-media:cleanup` periodically/operator-triggered to expire unattached rows and retry durable DELETING intents. Provider deletion failure keeps the intent; successful unlink does not imply immediate provider availability. Batch size100, next pass processes remaining work. UPLOADING reservations are persisted before remote upload so provider/DB failures retain known public IDs. Catastrophic database outage or ambiguous late provider completion can still require provider reconciliation; do not delete referenced assets blindly. No background scheduler is installed by this task.
+
+Migration `AddListingMedia1794708894334` adds only ListingMedia and its owner index. Generated, SQL reviewed, applied to student-mart;7 applied migrations/none pending/schema matches. Down drops the new table and its data and was not run.
+
+Future Listing create/update tickets must use `ListingMediaService.attach/detach(manager,ownerId,ids,listingId)` inside their Listing transaction. These lock/check owner, expiry, uniqueness and maximum8 references, and mark removals for cleanup only after commit. There is no Listing table/API yet; linkage currently is a reserved UUID plus state, not a fabricated foreign key. Complete ListingImage/FK integration and full update rollback remain the responsibility of #127/#130.
+
+Verification2026-11-15: backend typecheck/build and24 unit tests PASS. Real Cloudinary service/PostgreSQL smoke uploaded a generated PNG, fetched HTTPS200 and deleted it; temporary Account/media rows and remote asset cleaned. HTTP/provider-adapter integration is recorded in the task audit and must not be confused with native phone validation.

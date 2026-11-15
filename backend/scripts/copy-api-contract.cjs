@@ -7,3 +7,5 @@ copyFileSync(
   resolve(__dirname, '../../docs/contracts/accounts.openapi.yaml'),
   resolve(destination, 'accounts.openapi.yaml'),
 );
+
+copyFileSync(resolve(__dirname, '../../docs/contracts/listings.openapi.yaml'), resolve(destination, 'listings.openapi.yaml'));

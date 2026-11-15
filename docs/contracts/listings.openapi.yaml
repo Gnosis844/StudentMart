@@ -804,6 +804,7 @@ paths:
       tags:
         - Listings
       summary: Upload one owner-scoped unattached listing image, independently of avatars.
+      x-studentmart-runtime: Implemented by TASK-04.02; other Listing operations remain planned.
       parameters: []
       requestBody:
         required: true
@@ -932,7 +933,7 @@ paths:
           headers:
             Cache-Control:
               $ref: "#/components/headers/NoStore"
-      description: Proposed limit 10 MiB per image; actual JPEG/PNG/WebP decode and re-encode, strip metadata, max
+      description: Operational cap32 pending UPLOADING/STAGED assets per account returns429 with Retry-After60. Limit10 MiB per image; actual JPEG/PNG/WebP decode and re-encode, strip metadata, max
         24 megapixels and 12000px per dimension. Asset expires after 24h unattached; same asset cannot attach
         to another listing. Retry uses a fresh upload; cleanup policy handles orphaned copies.
   /listing-media/{mediaId}:

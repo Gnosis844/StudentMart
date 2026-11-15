@@ -20,7 +20,8 @@
     "migration:run": "pnpm run build && typeorm migration:run -d dist/shared/database/data-source.js",
     "migration:show": "pnpm run build && typeorm migration:show -d dist/shared/database/data-source.js",
     "migration:revert": "pnpm run build && typeorm migration:revert -d dist/shared/database/data-source.js",
-    "avatar:cleanup": "pnpm run build && node dist/operations/retry-avatar-cleanup.js"
+    "avatar:cleanup": "pnpm run build && node dist/operations/retry-avatar-cleanup.js",
+    "listing-media:cleanup": "pnpm run build && node dist/operations/retry-listing-media-cleanup.js"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.8",

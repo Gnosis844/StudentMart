@@ -1,3 +1,7 @@
+import {ListingMediaController} from "../listings/presentation/listing-media.controller";
+import {ListingMediaService} from "../listings/business/listing-media.service";
+import {LISTING_MEDIA_STORAGE,type ListingMediaStorage} from "../listings/business/listing-media-storage";
+import {CloudinaryListingMediaStorage} from "../listings/data/cloudinary-listing-media-storage";
 import { Module, type DynamicModule } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { APP_GUARD } from "@nestjs/core";
@@ -20,8 +24,10 @@ export class AuthModule {
   static register(config: AppConfig): DynamicModule {
     if (!config.AUTH_RATE_LIMIT_SECRET) throw new Error("Configure AUTH_RATE_LIMIT_SECRET before starting authentication");
     return {
-      module: AuthModule, controllers: [AuthController, ProfileController, AvatarController],
+      module: AuthModule, controllers: [ListingMediaController, AuthController, ProfileController, AvatarController],
       providers: [
+{provide:LISTING_MEDIA_STORAGE,useFactory:()=>new CloudinaryListingMediaStorage(config)},
+{provide:ListingMediaService,inject:[DataSource,LISTING_MEDIA_STORAGE],useFactory:(source:DataSource,storage:ListingMediaStorage)=>new ListingMediaService(source,storage)},
         { provide: AVATAR_STORAGE, useFactory: () => new CloudinaryAvatarStorage(config) },
         { provide: AvatarService, inject: [DataSource, AVATAR_STORAGE], useFactory: (source:DataSource,storage:AvatarStorage) => new AvatarService(source,storage) },
         { provide: ProfileService, inject: [DataSource], useFactory: (source: DataSource) => new ProfileService(source) },
