@@ -48,3 +48,7 @@ Review source QA phát hiện App còn render placeholder dù đã import compos
 - [ ] Draft persistence qua app kill thuộc TASK-23; task này có interface và trạng thái account-scoped, không khẳng định đồng bộ nhiều thiết bị.
 
 PR chờ người dùng review/approve; không tự merge/đóng issue/Done khi thiếu bằng chứng nghiệm thu. `.agents/` và `.github/` giữ local, không track; không tuyên bố CI tự động đã pass.
+
+## Final verification
+
+Final backend UUID-normalization revision: full HTTP/PostgreSQL integration 36/36 PASS across16files. Final mobile suite100PASS; totals119contract+28backend+100mobile=247contract/unit tests. Backend/mobile typecheck and backend build/schema PASS;8migrations applied,nonepending. Expo dependency check,Doctor20/20 and Android/iOS export PASS after actual App compose/own-listing wiring. Native-device acceptance, approved production category/area data and TASK23 durable drafts remain pending.
