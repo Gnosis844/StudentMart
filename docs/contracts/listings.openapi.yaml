@@ -1,0 +1,2300 @@
+openapi: 3.0.3
+info:
+  title: StudentMart Listing API Contract
+  version: 0.1.0
+  description: "TASK-04.01 #121/#122 proposed contract for review. No listing endpoint, entity or migration is
+    implemented by this ticket. Numeric bounds are explicit proposals pending user PR review; see
+    listing-model.md. R02-R04/R08; US02-US04/US08; UF02a/UF02b."
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development; device uses backend LAN origin.
+tags:
+  - name: Listings
+    description: Posting and managing own listings; public search/detail/chat belong to TASK-05/06/07.
+security:
+  - bearerSession: []
+paths:
+  /listings:
+    post:
+      operationId: createListing
+      tags:
+        - Listings
+      summary: Create one OPEN listing; optional school verification never blocks an otherwise permitted actor.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateListingRequest"
+      responses:
+        "201":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+  /me/listings:
+    get:
+      operationId: listOwnListings
+      tags:
+        - Listings
+      summary: Only current actor listings, including ended/removed summaries; never accept accountId.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            maxLength: 1024
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - OPEN
+              - COMPLETED
+              - CLOSED
+              - REMOVED
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerListingPage"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+  /me/listings/{listingId}:
+    parameters:
+      - $ref: "#/components/parameters/ListingId"
+    get:
+      operationId: getOwnListing
+      tags:
+        - Listings
+      summary: Read current stored owner projection for editing; removed content may be retained only for owner
+        access policy.
+      parameters: []
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+    put:
+      operationId: updateOwnListing
+      tags:
+        - Listings
+      summary: Replace editable content on OPEN listing only. Type immutable, expectedVersion required.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateListingRequest"
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+  /me/listings/{listingId}/transitions:
+    parameters:
+      - $ref: "#/components/parameters/ListingId"
+    post:
+      operationId: transitionOwnListing
+      tags:
+        - Listings
+      summary: COMPLETE/CLOSE/REMOVE by owner using reviewed transition matrix; no reopen.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionRequest"
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Idempotency-Replayed:
+              $ref: "#/components/headers/IdempotencyReplayed"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+  /me/listing-submissions/{key}:
+    get:
+      operationId: getOwnListingSubmission
+      tags:
+        - Listings
+      summary: Reconcile actor-scoped mutation key; unknown 404 is NOT proof a racing request cannot commit.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+  /listing-media:
+    post:
+      operationId: uploadListingMedia
+      tags:
+        - Listings
+      summary: Upload one owner-scoped unattached listing image, independently of avatars.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingMediaResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+      description: Proposed limit 10 MiB per image; actual JPEG/PNG/WebP decode and re-encode, strip metadata, max
+        24 megapixels and 12000px per dimension. Asset expires after 24h unattached; same asset cannot attach
+        to another listing. Retry uses a fresh upload; cleanup policy handles orphaned copies.
+  /listing-media/{mediaId}:
+    delete:
+      operationId: deleteUnattachedListingMedia
+      tags:
+        - Listings
+      summary: Owner deletes unattached media only; linked media edited transactionally through listing content.
+      parameters:
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed or already removed for this owner; no account or listing is deleted.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+  /catalog/listing-categories:
+    get:
+      operationId: listListingCategories
+      tags:
+        - Listings
+      summary: Approved supported listing categories; empty or unavailable is not permission to invent seed.
+      parameters: []
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogResponse"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+      security: []
+  /catalog/areas:
+    get:
+      operationId: listListingAreas
+      tags:
+        - Listings
+      summary: Reuse approved supported area identifiers from account catalog.
+      parameters: []
+      responses:
+        "200":
+          description: "Server-confirmed response. Private/mutation replies use Cache-Control: no-store."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogResponse"
+        "400":
+          description: Invalid fields, JSON, cursor or media ownership; whitelist enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "401":
+          description: UNAUTHENTICATED or SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "403":
+          description: "FORBIDDEN: current actor is restricted or lacks the action permission."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "404":
+          description: NOT_FOUND; do not disclose another owner private listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "409":
+          description: VERSION_CONFLICT, INVALID_TRANSITION, IDEMPOTENCY_CONFLICT, IDEMPOTENCY_IN_PROGRESS or
+            MEDIA_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "410":
+          description: IDEMPOTENCY_EXPIRED; do not repeat using a new key blindly.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "415":
+          description: UNSUPPORTED_MEDIA_TYPE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "429":
+          description: RATE_LIMITED; respect Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Retry-After:
+              $ref: "#/components/headers/RetryAfter"
+        "503":
+          description: SERVICE_UNAVAILABLE; mutation result may require reconciliation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        default:
+          description: Safe INTERNAL_ERROR envelope, never provider response or stack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+      security: []
+components:
+  securitySchemes:
+    bearerSession:
+      type: http
+      scheme: bearer
+      description: Existing opaque Account session, not JWT; never put token in URI.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Actor-scoped durable mutation key, bound to method/resource/canonical normalized payload; never
+        automatically replace an ambiguous or expired key.
+    ListingId:
+      name: listingId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Title:
+      type: string
+      minLength: 10
+      maxLength: 120
+    Description:
+      type: string
+      minLength: 1
+      maxLength: 5000
+    Money:
+      type: integer
+      minimum: 0
+      maximum: 1000000000
+      description: Integer VND; explicit zero is allowed, null/absence must never imply free.
+    Condition:
+      type: string
+      enum:
+        - USED_GOOD
+        - USED_FAIR
+        - NEEDS_REPAIR
+    LookupSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+    OwnerSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - displayName
+        - avatarUrl
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        avatarUrl:
+          type: string
+          format: uri
+          pattern: ^https://
+          nullable: true
+    SellListingInput:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - categoryId
+        - areaId
+        - condition
+        - price
+        - mediaIds
+      properties:
+        type:
+          type: string
+          enum:
+            - SELL
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        categoryId:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        condition:
+          $ref: "#/components/schemas/Condition"
+        price:
+          $ref: "#/components/schemas/Money"
+        mediaIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+    SellListingUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - categoryId
+        - areaId
+        - condition
+        - price
+        - mediaIds
+        - expectedVersion
+      properties:
+        type:
+          type: string
+          enum:
+            - SELL
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        categoryId:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        condition:
+          $ref: "#/components/schemas/Condition"
+        price:
+          $ref: "#/components/schemas/Money"
+        mediaIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+        expectedVersion:
+          type: integer
+          minimum: 1
+    BuyListingInput:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - categoryId
+        - areaId
+        - budget
+        - mediaIds
+      properties:
+        type:
+          type: string
+          enum:
+            - BUY
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        categoryId:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        budget:
+          type: integer
+          minimum: 0
+          maximum: 1000000000
+          description: Required wire field, null represents optional/unspecified budget; never infer zero.
+          nullable: true
+        mediaIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 0
+          maxItems: 8
+          uniqueItems: true
+    BuyListingUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - categoryId
+        - areaId
+        - budget
+        - mediaIds
+        - expectedVersion
+      properties:
+        type:
+          type: string
+          enum:
+            - BUY
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        categoryId:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        budget:
+          type: integer
+          minimum: 0
+          maximum: 1000000000
+          description: Required wire field, null represents optional/unspecified budget; never infer zero.
+          nullable: true
+        mediaIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 0
+          maxItems: 8
+          uniqueItems: true
+        expectedVersion:
+          type: integer
+          minimum: 1
+    ExchangeListingInput:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - categoryId
+        - areaId
+        - condition
+        - exchangeWanted
+        - mediaIds
+      properties:
+        type:
+          type: string
+          enum:
+            - EXCHANGE
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        categoryId:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        condition:
+          $ref: "#/components/schemas/Condition"
+        exchangeWanted:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        mediaIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+    ExchangeListingUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - categoryId
+        - areaId
+        - condition
+        - exchangeWanted
+        - mediaIds
+        - expectedVersion
+      properties:
+        type:
+          type: string
+          enum:
+            - EXCHANGE
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        categoryId:
+          type: string
+          format: uuid
+        areaId:
+          type: string
+          format: uuid
+        condition:
+          $ref: "#/components/schemas/Condition"
+        exchangeWanted:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        mediaIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+        expectedVersion:
+          type: integer
+          minimum: 1
+    CreateListingRequest:
+      oneOf:
+        - $ref: "#/components/schemas/SellListingInput"
+        - $ref: "#/components/schemas/BuyListingInput"
+        - $ref: "#/components/schemas/ExchangeListingInput"
+    UpdateListingRequest:
+      oneOf:
+        - $ref: "#/components/schemas/SellListingUpdate"
+        - $ref: "#/components/schemas/BuyListingUpdate"
+        - $ref: "#/components/schemas/ExchangeListingUpdate"
+    OpenLifecycle:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - completion
+        - removalActor
+      properties:
+        status:
+          type: string
+          enum:
+            - OPEN
+        completion:
+          type: string
+          nullable: true
+          enum:
+            - null
+        removalActor:
+          type: string
+          nullable: true
+          enum:
+            - null
+    CompletedLifecycle:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - completion
+        - removalActor
+      properties:
+        status:
+          type: string
+          enum:
+            - COMPLETED
+        completion:
+          type: string
+          enum:
+            - SOLD
+            - FOUND
+            - EXCHANGED
+        removalActor:
+          type: string
+          nullable: true
+          enum:
+            - null
+    ClosedLifecycle:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - completion
+        - removalActor
+      properties:
+        status:
+          type: string
+          enum:
+            - CLOSED
+        completion:
+          type: string
+          nullable: true
+          enum:
+            - null
+        removalActor:
+          type: string
+          nullable: true
+          enum:
+            - null
+    RemovedLifecycle:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - completion
+        - removalActor
+      properties:
+        status:
+          type: string
+          enum:
+            - REMOVED
+        completion:
+          type: string
+          nullable: true
+          enum:
+            - null
+        removalActor:
+          type: string
+          enum:
+            - OWNER
+            - ADMIN
+    Lifecycle:
+      oneOf:
+        - $ref: "#/components/schemas/OpenLifecycle"
+        - $ref: "#/components/schemas/CompletedLifecycle"
+        - $ref: "#/components/schemas/ClosedLifecycle"
+        - $ref: "#/components/schemas/RemovedLifecycle"
+    ListingImage:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - url
+        - width
+        - height
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+          pattern: ^https://
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+    SellListing:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - condition
+        - price
+        - id
+        - category
+        - area
+        - images
+        - owner
+        - lifecycle
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        type:
+          type: string
+          enum:
+            - SELL
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        condition:
+          $ref: "#/components/schemas/Condition"
+        price:
+          $ref: "#/components/schemas/Money"
+        id:
+          type: string
+          format: uuid
+        category:
+          $ref: "#/components/schemas/LookupSummary"
+        area:
+          $ref: "#/components/schemas/LookupSummary"
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListingImage"
+          minItems: 1
+          maxItems: 8
+        owner:
+          $ref: "#/components/schemas/OwnerSummary"
+        lifecycle:
+          $ref: "#/components/schemas/Lifecycle"
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BuyListing:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - budget
+        - id
+        - category
+        - area
+        - images
+        - owner
+        - lifecycle
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        type:
+          type: string
+          enum:
+            - BUY
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        budget:
+          type: integer
+          minimum: 0
+          maximum: 1000000000
+          description: Required wire field, null represents optional/unspecified budget; never infer zero.
+          nullable: true
+        id:
+          type: string
+          format: uuid
+        category:
+          $ref: "#/components/schemas/LookupSummary"
+        area:
+          $ref: "#/components/schemas/LookupSummary"
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListingImage"
+          minItems: 0
+          maxItems: 8
+        owner:
+          $ref: "#/components/schemas/OwnerSummary"
+        lifecycle:
+          $ref: "#/components/schemas/Lifecycle"
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ExchangeListing:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - description
+        - condition
+        - exchangeWanted
+        - id
+        - category
+        - area
+        - images
+        - owner
+        - lifecycle
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        type:
+          type: string
+          enum:
+            - EXCHANGE
+        title:
+          $ref: "#/components/schemas/Title"
+        description:
+          $ref: "#/components/schemas/Description"
+        condition:
+          $ref: "#/components/schemas/Condition"
+        exchangeWanted:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        id:
+          type: string
+          format: uuid
+        category:
+          $ref: "#/components/schemas/LookupSummary"
+        area:
+          $ref: "#/components/schemas/LookupSummary"
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListingImage"
+          minItems: 1
+          maxItems: 8
+        owner:
+          $ref: "#/components/schemas/OwnerSummary"
+        lifecycle:
+          $ref: "#/components/schemas/Lifecycle"
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Listing:
+      oneOf:
+        - $ref: "#/components/schemas/SellListing"
+        - $ref: "#/components/schemas/BuyListing"
+        - $ref: "#/components/schemas/ExchangeListing"
+    ListingResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - listing
+      properties:
+        listing:
+          $ref: "#/components/schemas/Listing"
+    OwnerListingPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Listing"
+          maxItems: 50
+        nextCursor:
+          type: string
+          maxLength: 1024
+          nullable: true
+    CatalogResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LookupSummary"
+    TransitionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - action
+        - expectedVersion
+      properties:
+        action:
+          type: string
+          enum:
+            - COMPLETE
+            - CLOSE
+            - REMOVE
+        expectedVersion:
+          type: integer
+          minimum: 1
+    ListingMedia:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - url
+        - width
+        - height
+        - expiresAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+          pattern: ^https://
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        expiresAt:
+          type: string
+          format: date-time
+    ListingMediaResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - media
+      properties:
+        media:
+          $ref: "#/components/schemas/ListingMedia"
+    SubmissionStatus:
+      oneOf:
+        - $ref: "#/components/schemas/ProcessingSubmission"
+        - $ref: "#/components/schemas/SuccessfulSubmission"
+        - $ref: "#/components/schemas/FailedSubmission"
+        - $ref: "#/components/schemas/ExpiredSuccessfulSubmission"
+        - $ref: "#/components/schemas/ExpiredUnsuccessfulSubmission"
+    SubmissionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - submission
+      properties:
+        submission:
+          $ref: "#/components/schemas/SubmissionStatus"
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+            - requestId
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHENTICATED
+                - SESSION_EXPIRED
+                - FORBIDDEN
+                - NOT_FOUND
+                - RATE_LIMITED
+                - PAYLOAD_TOO_LARGE
+                - UNSUPPORTED_MEDIA_TYPE
+                - SERVICE_UNAVAILABLE
+                - INTERNAL_ERROR
+                - VERSION_CONFLICT
+                - INVALID_TRANSITION
+                - IDEMPOTENCY_CONFLICT
+                - IDEMPOTENCY_IN_PROGRESS
+                - IDEMPOTENCY_EXPIRED
+                - MEDIA_UNAVAILABLE
+                - INVALID_CURSOR
+            message:
+              type: string
+              minLength: 1
+              maxLength: 500
+            requestId:
+              type: string
+              minLength: 1
+              maxLength: 128
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+    ProcessingSubmission:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - operation
+        - state
+        - listingId
+        - resultVersion
+        - errorCode
+        - replayUntil
+      properties:
+        key:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum:
+            - CREATE
+            - UPDATE
+            - TRANSITION
+        state:
+          type: string
+          enum:
+            - PROCESSING
+        listingId:
+          type: string
+          nullable: true
+          enum:
+            - null
+        resultVersion:
+          type: string
+          nullable: true
+          enum:
+            - null
+        errorCode:
+          type: string
+          nullable: true
+          enum:
+            - null
+        replayUntil:
+          type: string
+          format: date-time
+    SuccessfulSubmission:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - operation
+        - state
+        - listingId
+        - resultVersion
+        - errorCode
+        - replayUntil
+      properties:
+        key:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum:
+            - CREATE
+            - UPDATE
+            - TRANSITION
+        state:
+          type: string
+          enum:
+            - SUCCEEDED
+        listingId:
+          type: string
+          format: uuid
+        resultVersion:
+          type: integer
+          minimum: 1
+        errorCode:
+          type: string
+          nullable: true
+          enum:
+            - null
+        replayUntil:
+          type: string
+          format: date-time
+    FailedSubmission:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - operation
+        - state
+        - listingId
+        - resultVersion
+        - errorCode
+        - replayUntil
+      properties:
+        key:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum:
+            - CREATE
+            - UPDATE
+            - TRANSITION
+        state:
+          type: string
+          enum:
+            - FAILED
+        listingId:
+          type: string
+          nullable: true
+          enum:
+            - null
+        resultVersion:
+          type: string
+          nullable: true
+          enum:
+            - null
+        errorCode:
+          type: string
+          minLength: 1
+          maxLength: 100
+        replayUntil:
+          type: string
+          format: date-time
+    ExpiredSuccessfulSubmission:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - operation
+        - state
+        - listingId
+        - resultVersion
+        - errorCode
+        - replayUntil
+      properties:
+        key:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum:
+            - CREATE
+            - UPDATE
+            - TRANSITION
+        state:
+          type: string
+          enum:
+            - EXPIRED
+        listingId:
+          type: string
+          format: uuid
+        resultVersion:
+          type: integer
+          minimum: 1
+        errorCode:
+          type: string
+          nullable: true
+          enum:
+            - null
+        replayUntil:
+          type: string
+          format: date-time
+    ExpiredUnsuccessfulSubmission:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - operation
+        - state
+        - listingId
+        - resultVersion
+        - errorCode
+        - replayUntil
+      properties:
+        key:
+          type: string
+          format: uuid
+        operation:
+          type: string
+          enum:
+            - CREATE
+            - UPDATE
+            - TRANSITION
+        state:
+          type: string
+          enum:
+            - EXPIRED
+        listingId:
+          type: string
+          nullable: true
+          enum:
+            - null
+        resultVersion:
+          type: string
+          nullable: true
+          enum:
+            - null
+        errorCode:
+          type: string
+          nullable: true
+        replayUntil:
+          type: string
+          format: date-time
+  headers:
+    NoStore:
+      schema:
+        type: string
+        enum:
+          - no-store
+      description: Do not cache private data or mutation results.
+    RetryAfter:
+      schema:
+        type: integer
+        minimum: 1
+      description: Seconds before a permitted retry; keep the same attempt key.
+    IdempotencyReplayed:
+      schema:
+        type: string
+        enum:
+          - "true"
+      description: Present on a successful replay; snapshot may be older than current listing version.
