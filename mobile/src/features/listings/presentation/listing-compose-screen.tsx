@@ -5,6 +5,7 @@ import type { ListingCreateModel } from "../business/listing-create-model";
 import type { ListingCondition, ListingLookup, ListingType } from "../business/listing-create";
 import type { ListingMediaModel } from "../business/listing-media-model";
 import { ListingMediaPicker } from "./listing-media-picker";
+import { CatalogSelector } from "./catalog-selector";
 function Choices({ items, value, select, disabled }: { items: ListingLookup[]; value: string; select(id: string): void; disabled: boolean }) {
   return <View style={styles.choices}>{items.map(item => <Pressable key={item.id} accessibilityRole="radio" accessibilityState={{ selected: value === item.id, disabled }} disabled={disabled} onPress={() => select(item.id)} style={[styles.choice, item.id === value && styles.selected]}><Text style={styles.text}>{item.name}</Text></Pressable>)}</View>;
 }
@@ -25,8 +26,9 @@ export function ListingComposeScreen({ model, media, onBack, onCreated }: { mode
     <Text style={styles.heading}>Bạn muốn đăng loại tin nào?</Text>
     <View style={styles.choices}>{([["SELL", "Tin bán"], ["BUY", "Tìm mua"], ["EXCHANGE", "Trao đổi"]] as const).map(([type, label]) => <Pressable accessibilityRole="radio" accessibilityState={{ selected: d.type === type, disabled: locked }} disabled={locked} key={type} onPress={() => changeType(type)} style={[styles.choice, d.type === type && styles.selected]}><Text style={styles.text}>{label}</Text></Pressable>)}</View>
     <AuthField label={d.type === "BUY" ? "Món đồ cần tìm" : "Tên sản phẩm hoặc món đồ"} value={d.title} error={errors.title} editable={!locked} onChangeText={value => model.set("title", value)} placeholder="Nhập tiêu đề từ 10 đến 120 ký tự" />
-    <Text style={styles.heading}>Danh mục</Text><Choices items={state.categories} value={d.categoryId} select={id => model.set("categoryId", id)} disabled={locked} />{!!errors.categoryId && <Text style={styles.error}>{errors.categoryId}</Text>}
-    <Text style={styles.heading}>Khu vực</Text><Choices items={state.areas} value={d.areaId} select={id => model.set("areaId", id)} disabled={locked} />{!!errors.areaId && <Text style={styles.error}>{errors.areaId}</Text>}
+    <CatalogSelector label="Danh mục" items={state.categories} value={d.categoryId} onSelect={id => model.set("categoryId", id)} status={state.catalogStatus} disabled={locked} error={errors.categoryId} onRetry={() => { void model.loadCatalog(); }} />
+    <CatalogSelector label="Khu vực" items={state.areas} value={d.areaId} onSelect={id => model.set("areaId", id)} status={state.catalogStatus} disabled={locked} error={errors.areaId} onRetry={() => { void model.loadCatalog(); }} />
+    <Text style={styles.hint}>Chọn khu vực chung thuận tiện gặp mặt trong Làng Đại học. Không cần GPS hoặc địa chỉ nhà riêng.</Text>
     {state.catalogStatus === "loading" && <Text>Đang tải danh mục và khu vực…</Text>}
     {state.catalogStatus === "ready" && (!state.categories.length || !state.areas.length) && <Text style={styles.hint}>Danh mục hoặc khu vực hỗ trợ chưa được cung cấp. Bạn có thể soạn nội dung, nhưng chưa thể đăng khi danh sách còn thiếu.</Text>}
     <AuthButton label={state.catalogStatus === "error" ? "Thử tải lại danh mục/khu vực" : "Tải lại danh mục/khu vực"} disabled={state.busy || state.catalogStatus === "loading"} onPress={() => { void model.loadCatalog(); }} />
