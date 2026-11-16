@@ -35,8 +35,17 @@ pnpm.cmd --filter studentmart-backend exec vitest run tests/integration/student-
 
 Kết quả migration/check và suite tổng được ghi sau khi thực thi. Unit/mock, HTTP/PostgreSQL, Expo export và thao tác thiết bị được báo riêng; native iOS/Android selection/keyboard/safe-area vẫn cần người dùng kiểm tra.
 
-## K?t qu? focused QA
+## Kết quả focused QA
 
-`pnpm.cmd --filter studentmart-backend exec vitest run tests/integration/student-catalog.test.ts`: **1/1 PASS** tr?n HTTP/PostgreSQL th?t sau khi BE apply seed migration. Backend x?c nh?n 9 migration ?? apply/kh?ng pending/schema kh?p; QA kh?ng t? apply/revert. Kh?ng c? provider/native test trong test n?y.
+`pnpm.cmd --filter studentmart-backend exec vitest run tests/integration/student-catalog.test.ts`: **1/1 PASS** trên HTTP/PostgreSQL thật sau khi BE apply seed migration. Backend xác nhận 9 migration đã apply/không pending/schema khớp; QA không tự apply/revert. Không có provider/native test trong test này.
 
-Review source selector FE: l?a ch?n l?y t? API, modal c? t?m ki?m kh?ng d?u, FlatList, nh?n accessibility, safe area v? x? l? loading/empty/error/retry; ??ng/h?y kh?ng ??i selection. ??y l? review source, ch?a ch?ng minh keyboard/VoiceOver tr?n iPhone ho?c Android th?t.
+Review source selector FE: lựa chọn lấy từ API, modal có tìm kiếm không dấu, FlatList, nhãn accessibility, safe area và xử lý loading/empty/error/retry; đóng/hủy không đổi selection. Đây là review source, chưa chứng minh keyboard/VoiceOver trên iPhone hoặc Android thật.
+
+## Xác minh cuối ngày 2026-11-16
+
+- Focused QA hai file `student-catalog.test.ts` và `catalog-seed.test.ts`: **2/2 PASS** trên PostgreSQL thật. Test seed gọi lại migration dữ liệu trong transaction rồi rollback; giữ nguyên ID/tên có trước, không thay migration history và không lưu chỉnh sửa nhãn thử.
+- Root xác nhận `pnpm.cmd typecheck`: PASS cho backend/mobile.
+- Root xác nhận bộ contract/unit: **250 PASS** (119 contract, 28 backend, 103 mobile).
+- Root xác nhận integration tổng: **38 PASS** trên 18 file HTTP/PostgreSQL.
+- FE xác nhận export Android/iOS: PASS; không có thay đổi source sau lần export cuối.
+- Kiểm tra trên thiết bị iOS/Android thật vẫn pending. Các kết quả tự động không thay bằng chứng thao tác picker, keyboard, VoiceOver hoặc safe area trên điện thoại.
