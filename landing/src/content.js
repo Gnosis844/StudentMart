@@ -7,7 +7,8 @@ export const LINKS = {
   report: 'https://github.com/L02-VibeCode/StudentMart/blob/main/report/main.pdf',
   // TODO: dán link Figma (quyền "Anyone with the link → can view") vào đây.
   // Để trống thì thẻ Figma sẽ không hiển thị.
-  figma: '',
+  figma:
+    'https://www.figma.com/design/LGiEoRFkoVCTuTg0QHRxIm/StudentMart---Mobile-App-UI?node-id=8-307&t=gMFgo5DVrmJC2vGT-0',
   org: 'https://github.com/L02-VibeCode',
 }
 

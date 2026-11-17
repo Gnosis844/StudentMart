@@ -1,6 +1,6 @@
 # Landing page — asset inventory
 
-Nguồn: Figma của nhóm (link: _(dán vào đây)_). Ảnh đã nhận ngày 2026-11-17.
+Nguồn: Figma của nhóm — https://www.figma.com/design/LGiEoRFkoVCTuTg0QHRxIm/StudentMart---Mobile-App-UI. Ảnh đã nhận ngày 2026-11-17.
 
 ## 1. Cấu trúc thư mục
 
