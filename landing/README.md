@@ -2,6 +2,10 @@
 
 Trang giới thiệu công khai của StudentMart (CO3043 · HK261), dựng bằng **React + Vite**.
 
+- **Bản deploy:** https://student-mart-alpha.vercel.app/
+- **Nguồn deploy:** fork `Gnosis844/StudentMart`, Root Directory `landing`, framework Vite.
+- **Pull request:** https://github.com/L02-VibeCode/StudentMart/pull/140
+
 ## Chạy cục bộ
 
 ```sh
